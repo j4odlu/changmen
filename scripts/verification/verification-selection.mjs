@@ -7,15 +7,15 @@ const repository = fileURLToPath(new URL("../../", import.meta.url));
 export const dailyVerifierTests = [
   "backend-db-boundary", "backend-dynamic-paths", "component-entry-boundary", "component-install-inputs",
   "source-ownership-contracts", "venue-node-dependencies", "pm-loader-bindings",
-  "pm-shared-loader-evidence", "pm-current-dependencies", "frontend-build-contracts",
+  "pm-shared-loader-evidence", "pm-current-dependencies", "pm-dependency-audit", "frontend-build-contracts",
   "current-boundaries", "daily-boundaries", "verification-selection", "presentation-boundary", "check-presentation",
   "check-prediction-settlement",
 ].map(name => `scripts/verification/${name}.test.mjs`);
 const plannerTests = new Set(["validation-plan.test.mjs", "verify-change.test.mjs"].map(name => "scripts/verification/" + name));
 const specialNodeTest = "scripts/verification/fok-source-specialization.test.mjs";
-// These old suites mixed current checks with whole-source migration proofs.
-// Their current cases now live in the dedicated daily suites above.
-const replacedHistoricalSuites = new Set(["scripts/verification/pm-dependency-audit.mjs", "scripts/verification/source-ownership.mjs"]);
+// The old ownership suite mixed current checks with whole-source migration proofs.
+// Its current cases now live in the dedicated daily suite above.
+const replacedHistoricalSuites = new Set(["scripts/verification/source-ownership.mjs"]);
 const clean = file => {
   file = file.replaceAll("\\", "/").replace(/^\.\//, "");
   if (!file || path.posix.isAbsolute(file) || /^[a-z]:/i.test(file) || file.split("/").includes("..")) throw Error("Invalid verifier selection path");

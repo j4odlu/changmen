@@ -7,6 +7,12 @@ import { runVerifierSelfTests, verifierCliInputs } from "./run-self-tests.mjs";
 import { validationPlan } from "./validation-plan.mjs";
 
 const scratch = [];
+it("runs the current PM dependency suite without enabling historical migration audits", () => {
+  const file = "scripts/verification/pm-dependency-audit.test.mjs";
+  const selection = selectVerificationTests([file]);
+  expect(selection.tests).toContain(file);
+  expect(selection.historicalTests).not.toContain(file);
+});
 it("reads every path from invocation-bound evidence, preserving explicit standalone modes", () => {
   const f = fixture(), paths = Array.from({ length: 1000 }, (_, i) => `client/web/src/${"long-path/".repeat(8)}file-${i}.ts`);
   const selected = { invocationId: "current-invocation", root: fs.realpathSync(f.root), paths };

@@ -16,6 +16,9 @@ test("candidate profile covers eight actual processes, six install roots and the
     "@changmen/venue-node", "@changmen/runtime-tooling"]) assert(p.workspaces.includes(name));
   assert(!p.roots.includes("@changmen/sxbet-collector"));
   assert(!p.workspaces.includes("@changmen/platform-probes"));
+  // npm can link a workspace devDependency even with --omit=dev.
+  const backend = readInstallWorkspaces(root).get("@changmen/backend").pkg;
+  assert(!backend.devDependencies?.["@changmen/platform-probes"]);
   assert(p.installArgs.includes("--omit=dev")); assert(!p.installArgs.includes("--include=dev"));
   assert(p.installArgs.includes("--include-workspace-root=false"));
   assert(p.installArgs.includes("--ignore-scripts=false"));

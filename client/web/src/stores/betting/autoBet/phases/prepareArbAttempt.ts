@@ -1,4 +1,4 @@
-import { createLowOddsSingleLinkId } from "@changmen/client-core/shared/format";
+import { createLowOddsSingleLinkId, createObSingleLinkId } from "@changmen/client-core/shared/format";
 import { lowOddsMarketKeys, lowOddsMarketSubmitted } from "@/extensions/arbBet/lowOddsSingle";
 import type { ArbBetAttemptParams, ArbBetReady } from "@/stores/betting/autoBet/phases/types";
 import { capturePmFokPreflightMode } from "@changmen/venue-browser/polymarket";
@@ -290,7 +290,8 @@ export async function prepareArbAttempt(
     implied,
   });
 
-  const linkId = lowOddsSingle ? createLowOddsSingleLinkId(linkTs) : createArbLinkId(singleLegByRate, linkTs);
+  const linkId = lowOddsSingle ? createLowOddsSingleLinkId(linkTs)
+    : obSingle ? createObSingleLinkId(linkTs) : createArbLinkId(singleLegByRate, linkTs);
   syncActiveBetBegin({
     match,
     bet,

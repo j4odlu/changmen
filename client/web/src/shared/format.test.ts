@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  createObSingleLinkId,
+  isObSingleLink,
   createLowOddsSingleLinkId,
   isLowOddsSingleLink,
   orderLinkSortKey as lowOddsSortKey,
@@ -21,6 +23,22 @@ import {
 } from "@changmen/client-core/shared/format";
 
 describe("format shared helpers", () => {
+  it("identifies OB single orders independently and restores their original timestamp", () => {
+    const at = 1_792_680_000_123;
+    const link = createObSingleLinkId(at);
+    expect(Number.isSafeInteger(link)).toBe(true);
+    expect(formatLinkId(link)).toBe("OB");
+    expect(classifyLinkId(link)).toBe("obSingle");
+    expect(linkIdSourceLabel("obSingle")).toBe("OB单边");
+    expect(isObSingleLink(link)).toBe(true);
+    expect(isSingleLegLink(link)).toBe(true);
+    expect(isSingleLegRateLink(link)).toBe(false);
+    expect(isLowOddsSingleLink(link)).toBe(false);
+    expect(isValueBetLink(link)).toBe(false);
+    expect(orderLinkSortKey(link)).toBe(at);
+    for (const other of [at, -at, createLowOddsSingleLinkId(at), createValueBetLinkId(at), 0, Number.NaN])
+      expect(isObSingleLink(other)).toBe(false);
+  });
   it("rounds display odds to three decimals and drops invalid values", () => {
     expect(formatDisplayOdds(1.23456)).toBe(1.235);
     expect(formatDisplayOdds(0)).toBe(0);

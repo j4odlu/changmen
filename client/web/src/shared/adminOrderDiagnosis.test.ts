@@ -90,6 +90,18 @@ describe("adminOrderDiagnosis", () => {
     }]);
     expect(buildAdminOrderOrchestrationStages(steps, 0).find(stage => stage.key === "queue")?.tone).toBe("warning");
   });
+  it("uses the OB booking timestamp to associate legacy logs even if the fill was delayed", () => {
+    const ts = 1_790_266_881_397;
+    const link = -(5e15 + ts);
+    const logs = [
+      { id: 1, createAt: ts + 2000, title: "", kind: "check", summary: "当前预检" },
+      { id: 2, createAt: ts + 90_000, title: "", kind: "check", summary: "其它轮次" },
+    ];
+    const result = filterAdminOrderDiagnosisLogs({ link, orders: [], logs });
+    expect(result.related.map(log => log.id)).toEqual([1]);
+    expect(result.filtered.map(log => log.id)).toEqual([2]);
+  });
+
   it("keeps exact Link logs and only near-order legacy logs", () => {
     const link = 1_790_266_881_397;
     const order = {

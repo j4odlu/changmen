@@ -24,7 +24,7 @@ describe("backend order lookup extraction preserves its original implementation"
   const executable = source => ts.transpileModule(source.replace(/^export /m, ""), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, removeComments: true },
   }).outputText;
-  it("keeps all 41 complete function bodies, including query order, validation and data whitelists", () => {
+  it("keeps the 38 unchanged function bodies, including query order, validation and data whitelists", () => {
     let count = 0;
     for (const [module, names] of Object.entries(lookupExtractionGroups)) {
       const source = fs.readFileSync(new URL(`./user_log_lookup/${module}.js`, import.meta.url), "utf8");
@@ -32,11 +32,13 @@ describe("backend order lookup extraction preserves its original implementation"
       const functions = new Map(tree.statements.filter(ts.isFunctionDeclaration).map(node => [node.name.text, node.getText(tree)]));
       expect([...functions.keys()].sort()).toEqual([...names].sort());
       for (const name of names) {
+        // [changmen 扩展] OB 单边的三项规则已更新，下方行为测试覆盖其标识及编码时间窗。
+        if (module === "rules" && ["linkTypeLabel", "groupMetaLabel", "computeLogWindow"].includes(name)) continue;
         expect(executable(functions.get(name)), name).toBe(executable(originalLookupFunctions.get(name)));
         count++;
       }
     }
-    expect(count).toBe(41);
+    expect(count).toBe(38);
   });
   it("keeps every constant and all 22 public exports behind the original import path", () => {
     expect(Object.keys(lookupPublicApi).sort()).toEqual([...originalLookupExports].sort());
@@ -52,6 +54,16 @@ describe("backend order lookup extraction preserves its original implementation"
 });
 
 describe("user_log_lookup", () => {
+  it.each([5e15, 6e15, 7e15])("decodes the log window for single-leg Link base %s", base => {
+    const ts = 1_781_802_360_547;
+    const link = -(base + ts);
+    expect(computeLogWindow([{ link, create_at: ts + 1000 }], 60_000))
+      .toEqual({ fromMs: ts - 60_000, toMs: ts + 61_000 });
+    if (base === 5e15) {
+      expect(linkTypeLabel(link)).toBe("OB单边");
+      expect(groupMetaLabel(link, 1)).toBe("OB单边");
+    }
+  });
   it("never attaches a conflicting explicit Link result to the previous check", () => {
     const orders = [{ orderId: "o1", link: 123, provider: "OB", match: "m", bet: "b", createAt: 1000 }];
     const logs = [

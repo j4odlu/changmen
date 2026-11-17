@@ -5,6 +5,7 @@ import type {
   AdminOrderLogOrder,
 } from "@/types/admin";
 import { Currency, defaultCurrencyForProvider, getExchange } from "@changmen/shared/currency";
+import { orderLinkSortKey } from "@changmen/client-core/shared/format";
 import { attemptLogSegments } from "@/shared/adminOrderLogSegments";
 
 export type AdminOrderDiagnosisTone = "neutral" | "success" | "warning" | "danger";
@@ -77,7 +78,7 @@ export function filterAdminOrderDiagnosisLogs(
   const anchors = payload.orders
     .map(order => Number(order.createAt) || 0)
     .filter(Boolean);
-  const linkAt = Math.abs(link);
+  const linkAt = orderLinkSortKey(link);
   if (linkAt >= TIMESTAMP_LINK_MIN)
     anchors.push(linkAt);
 

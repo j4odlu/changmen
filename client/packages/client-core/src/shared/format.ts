@@ -2,6 +2,9 @@
 
 import { formatOdds } from "@changmen/shared/odds_format";
 import { normalizeEpochMs } from "@changmen/shared/time/match_time";
+import { isObSingleLink, LOW_ODDS_LINK_BASE, OB_SINGLE_LINK_BASE, VALUE_BET_LINK_BASE } from "@changmen/shared/order_link_encoding";
+
+export { createObSingleLinkId, isObSingleLink, LOW_ODDS_LINK_BASE, OB_SINGLE_LINK_BASE, VALUE_BET_LINK_BASE } from "@changmen/shared/order_link_encoding";
 
 export function formatDate(ts: number | string | null | undefined): string {
   const ms = normalizeEpochMs(ts);
@@ -89,15 +92,7 @@ export function arbProfitRate(implied: number, digits = 1): string {
   return percent(implied - 1, digits);
 }
 
-/**
- * 正 EV 单边 Link 编码：`-(VALUE_BET_LINK_BASE + Date.now())`。
- * 与 9999 单边的 `-Date.now()` 区分；排序时用 `orderLinkSortKey` 还原时间戳。
- * 7e15 远大于当前 ms 时间戳（~1.7e12），且在 Number 安全整数内。
- */
-export const VALUE_BET_LINK_BASE = 7_000_000_000_000_000;
-
 /** [changmen 扩展] LOS：独立于 9999 和正 EV 的负 Link 区间。 */
-export const LOW_ODDS_LINK_BASE = 6_000_000_000_000_000;
 export function isLowOddsSingleLink(link: number | null | undefined): boolean {
   const n = Number(link);
   return Number.isFinite(n) && n < 0 && Math.abs(n) >= LOW_ODDS_LINK_BASE && Math.abs(n) < VALUE_BET_LINK_BASE;
@@ -106,7 +101,7 @@ export function createLowOddsSingleLinkId(ts = Date.now()): number {
   return -(LOW_ODDS_LINK_BASE + ts);
 }
 
-/** 任意负 Link（9999 单边或正 EV）；双腿套利为正时间戳 */
+/** 任意负 Link（9999、正 EV、LOS 或 OB 单边）；双腿套利为正时间戳 */
 export function isSingleLegLink(link: number | null | undefined): boolean {
   const n = Number(link);
   return Number.isFinite(n) && n < 0;
@@ -120,24 +115,26 @@ export function isValueBetLink(link: number | null | undefined): boolean {
 
 /** 比例 9999 单边（负时间戳，且非正 EV 编码） */
 export function isSingleLegRateLink(link: number | null | undefined): boolean {
-  return isSingleLegLink(link) && !isValueBetLink(link) && !isLowOddsSingleLink(link);
+  return isSingleLegLink(link) && !isValueBetLink(link) && !isLowOddsSingleLink(link) && !isObSingleLink(link);
 }
 
 export function createValueBetLinkId(linkTs = Date.now()): number {
   return -(VALUE_BET_LINK_BASE + linkTs);
 }
 
-/** 侧栏/分组排序键：正 EV 还原为真实时间戳，其余取绝对值 */
+/** 侧栏/分组排序键：编码 Link 还原为真实时间戳，其余取绝对值 */
 export function orderLinkSortKey(link: number | null | undefined): number {
   const n = Math.abs(Number(link)) || 0;
   if (n >= VALUE_BET_LINK_BASE)
     return n - VALUE_BET_LINK_BASE;
   if (n >= LOW_ODDS_LINK_BASE)
     return n - LOW_ODDS_LINK_BASE;
+  if (n >= OB_SINGLE_LINK_BASE)
+    return n - OB_SINGLE_LINK_BASE;
   return n;
 }
 
-/** 展示 LinkID：套利正数原样；9999→🏆；正 EV→💎 */
+/** 展示 LinkID：套利正数原样；9999→🏆；正 EV→💎；LOS→🎯；OB 单边→OB */
 export function formatLinkId(link: number | null | undefined): string {
   const n = Number(link);
   if (!Number.isFinite(n) || n === 0)
@@ -146,13 +143,15 @@ export function formatLinkId(link: number | null | undefined): string {
     return "💎";
   if (isLowOddsSingleLink(n))
     return "🎯";
+  if (isObSingleLink(n))
+    return "OB";
   if (n < 0)
     return "🏆";
   return String(n);
 }
 
 /** SaveOrderBind 时间戳 link vs SaveOrder linkFromOrder hash（u32） */
-export type LinkIdSource = "arb" | "single" | "valueBet" | "lowOddsSingle" | "hash";
+export type LinkIdSource = "arb" | "single" | "valueBet" | "lowOddsSingle" | "obSingle" | "hash";
 
 const ARB_LINK_MIN = 1_000_000_000_000;
 
@@ -164,6 +163,8 @@ export function classifyLinkId(link: number | null | undefined): LinkIdSource | 
     return "valueBet";
   if (isLowOddsSingleLink(n))
     return "lowOddsSingle";
+  if (isObSingleLink(n))
+    return "obSingle";
   if (n < 0)
     return "single";
   if (n >= ARB_LINK_MIN)
@@ -181,6 +182,8 @@ export function linkIdSourceLabel(source: LinkIdSource | null): string {
       return "正EV";
     case "lowOddsSingle":
       return "LOS";
+    case "obSingle":
+      return "OB单边";
     case "hash":
       return "hash";
     default:

@@ -19,6 +19,7 @@ const KIND_TITLE: Record<LinkIdSource, string> = {
   arb: "套利 attempt 的正时间戳 Link（不表示组内一定有两腿）",
   single: "比例 9999 单边",
   lowOddsSingle: "LOS：双腿预检后只提交低赔腿，每盘口一次，不补单",
+  obSingle: "含 OB 仅下 OB：双腿预检后只提交 OB，对冲腿按配置跳过，不补单",
   valueBet: "正 EV 确认下单",
   hash: "未绑单占位（SaveOrder hash / create_at 占位）",
 };
@@ -42,6 +43,8 @@ export function formatActiveBetLinkLabel(linkId: number | null | undefined): str
     return `Link ${tail}`;
   if (badge.source === "lowOddsSingle")
     return `Link ${tail} · 🎯LOS`;
+  if (badge.source === "obSingle")
+    return `Link ${tail} · OB单边`;
   if (badge.source === "single")
     return `Link ${tail} · 🏆单边`;
   if (badge.source === "valueBet")

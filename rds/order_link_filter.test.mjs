@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
 import {
+  OB_SINGLE_LINK_BASE,
+  isObSingleLink,
   ARB_LINK_MIN,
   LOW_ODDS_LINK_BASE,
   isLowOddsSingleLink,
@@ -281,6 +283,24 @@ describe("order_link_filter", () => {
     assert.match(sqlOrderBelongsToRange(1, 2), /6000000000000000/);
     assert.equal(isLowOddsSingleLink(-(VALUE_BET_LINK_BASE + at)), false);
     assert.equal(isSingleLegRateLink(-at), true);
+  });
+
+  it("OB single keeps its mode, original booking date and rebind chronology", () => {
+    const at = 1_792_680_000_123;
+    const link = -(OB_SINGLE_LINK_BASE + at);
+    assert.equal(isObSingleLink(link), true);
+    assert.equal(isSingleLegRateLink(link), false);
+    assert.equal(isLowOddsSingleLink(link), false);
+    assert.equal(isValueBetLink(link), false);
+    assert.equal(isConfirmedClientBindLink(link), true);
+    assert.equal(orderLinkSortKey(link), at);
+    assert.equal(orderBelongsToMsRange(link, at + 86400000, at - 1, at + 1), true);
+    assert.equal(orderBelongsToMsRange(link, at, at + 1, at + 86400000), false);
+    assert.equal(canRebindLinkNewerToOlder(link, at - 1), true);
+    assert.equal(canRebindLinkNewerToOlder(link, at + 1), false);
+    assert.match(sqlOrderBelongsToRange(1, 2), /5000000000000000/);
+    for (const other of [at, -at, -(LOW_ODDS_LINK_BASE + at), -(VALUE_BET_LINK_BASE + at), 0, NaN])
+      assert.equal(isObSingleLink(other), false);
   });
 
 });

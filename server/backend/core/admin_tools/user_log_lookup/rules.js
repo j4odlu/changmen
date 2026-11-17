@@ -1,3 +1,5 @@
+import { isObSingleLink, orderLinkSortKey } from "@changmen/db/order_link_filter.js";
+
 export const ARB_LINK_MIN = 1_000_000_000_000;
 export const DEFAULT_LOG_PADDING_MS = 180_000;
 const RELATED_BET_LOG_WINDOW_MS = 15_000;
@@ -6,6 +8,8 @@ export function linkTypeLabel(link) {
   const n = Number(link);
   if (!Number.isFinite(n) || n === 0)
     return "未知";
+  if (isObSingleLink(n))
+    return "OB单边";
   if (n < 0)
     return "单边";
   if (n >= ARB_LINK_MIN)
@@ -15,6 +19,8 @@ export function linkTypeLabel(link) {
 
 export function groupMetaLabel(link, orderCount) {
   const n = Number(link);
+  if (isObSingleLink(n))
+    return "OB单边";
   if (Number.isFinite(n) && n < 0)
     return "单边";
   if (orderCount > 1 && Number.isFinite(n) && n >= ARB_LINK_MIN) {
@@ -32,10 +38,9 @@ export function computeLogWindow(orders, paddingMs = DEFAULT_LOG_PADDING_MS) {
     .map(o => Number(o.create_at) || 0)
     .filter(t => t > 0);
   for (const o of orders || []) {
-    const linkTs = Number(o.link) || 0;
-    const absLinkTs = Math.abs(linkTs);
-    if (absLinkTs >= ARB_LINK_MIN)
-      times.push(absLinkTs);
+    const linkTs = orderLinkSortKey(o.link);
+    if (linkTs >= ARB_LINK_MIN)
+      times.push(linkTs);
   }
   if (!times.length)
     return null;

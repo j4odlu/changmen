@@ -12,6 +12,7 @@
     "./pm_gtc_recovery": "./pm_gtc_recovery.ts",
     "./pm_gtc_result": "./pm_gtc_result.ts",
     "./order_market_identity": "./order_market_identity.ts",
+    "./order_link_encoding": "./order_link_encoding.ts",
     "./order_observation": "./order_observation.ts",
     "./order_observation_view": "./order_observation_view.ts",
     "./order_progress_evidence": "./order_progress_evidence.ts",

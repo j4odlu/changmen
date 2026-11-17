@@ -2,6 +2,7 @@ import { LoseOrder } from "@/models/loseOrder";
 import type { OrderRow } from "@/types/order";
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { describe, expect, it } from "vitest";
+import { createObSingleLinkId } from "@changmen/client-core/shared/format";
 import {
   canRebindOrderLinkTo,
   canRebindOrderOnto,
@@ -31,6 +32,16 @@ import {
 } from "./orderLink";
 
 describe("orderLink A8 parity", () => {
+  it("shows OB single markers before and after settlement and keeps chronological ordering", () => {
+    const ts = 1_780_000_000_500;
+    const link = createObSingleLinkId(ts);
+    const row = { Link: link, Status: "None", BetMoney: 100, Odds: 2, Money: 0, Type: "OB", Item: "Home", OrderID: "ob1" };
+    expect(orderLinkLegend([row])).toBe("OB 100");
+    expect(orderLinkLegend([{ ...row, Status: "Win", Money: 100 }])).toBe("OB +100");
+    expect(sortOrdersByLinkDesc([{ Link: ts + 1 }, { Link: link }, { Link: -(ts - 1) }]).map(r => r.Link))
+      .toEqual([ts + 1, link, -(ts - 1)]);
+    expect(orderGroupHomeTs([row])).toBe(ts);
+  });
   it("linkIdGroupKey uses Link as-is", () => {
     expect(linkIdGroupKey(1_700_000_000_123)).toBe(1_700_000_000_123);
     expect(linkIdGroupKey(-1_700_000_000_123)).toBe(-1_700_000_000_123);

@@ -1,18 +1,19 @@
+import { isObSingleLink, LOW_ODDS_LINK_BASE, OB_SINGLE_LINK_BASE, VALUE_BET_LINK_BASE } from "@changmen/shared/order_link_encoding";
+
+export { isObSingleLink, LOW_ODDS_LINK_BASE, OB_SINGLE_LINK_BASE, VALUE_BET_LINK_BASE } from "@changmen/shared/order_link_encoding";
+
 /** 套利 LinkID 下限（与 SaveOrderBind Date.now() 对齐） */
 export const ARB_LINK_MIN = 1_000_000_000_000;
 
-/** 与 client-core format.VALUE_BET_LINK_BASE 对齐：正 EV 编码基线 */
-export const VALUE_BET_LINK_BASE = 7_000_000_000_000_000;
 /** [changmen 扩展] 与 client-core 保持相同的低赔单边 Link 区间。 */
-export const LOW_ODDS_LINK_BASE = 6_000_000_000_000_000;
 export function isLowOddsSingleLink(link) {
   const n = Number(link);
   return Number.isFinite(n) && n < 0 && Math.abs(n) >= LOW_ODDS_LINK_BASE && Math.abs(n) < VALUE_BET_LINK_BASE;
 }
 
 /**
- * 侧栏/改绑排序键：正 EV 还原真实时间戳，其余取绝对值。
- * 与 packages/client-core orderLinkSortKey 一致。
+ * 侧栏/改绑排序键：编码 Link 还原真实时间戳，其余取绝对值。
+ * 与 client-core orderLinkSortKey 一致。
  */
 export function orderLinkSortKey(link) {
   const n = Math.abs(Number(link)) || 0;
@@ -20,12 +21,14 @@ export function orderLinkSortKey(link) {
     return n - VALUE_BET_LINK_BASE;
   if (n >= LOW_ODDS_LINK_BASE)
     return n - LOW_ODDS_LINK_BASE;
+  if (n >= OB_SINGLE_LINK_BASE)
+    return n - OB_SINGLE_LINK_BASE;
   return n;
 }
 
-/** PostgreSQL：把 Link 还原成开弓毫秒（正 EV 去掉 7e15 基线） */
+/** PostgreSQL：把 Link 还原成开弓毫秒（去掉正 EV / LOS / OB 单边编码基线） */
 export function sqlLinkHomeTsExpr(linkExpr = "link") {
-  return `(CASE WHEN ABS(${linkExpr}) >= ${VALUE_BET_LINK_BASE} THEN ABS(${linkExpr}) - ${VALUE_BET_LINK_BASE} WHEN ABS(${linkExpr}) >= ${LOW_ODDS_LINK_BASE} THEN ABS(${linkExpr}) - ${LOW_ODDS_LINK_BASE} ELSE ABS(${linkExpr}) END)`;
+  return `(CASE WHEN ABS(${linkExpr}) >= ${VALUE_BET_LINK_BASE} THEN ABS(${linkExpr}) - ${VALUE_BET_LINK_BASE} WHEN ABS(${linkExpr}) >= ${LOW_ODDS_LINK_BASE} THEN ABS(${linkExpr}) - ${LOW_ODDS_LINK_BASE} WHEN ABS(${linkExpr}) >= ${OB_SINGLE_LINK_BASE} THEN ABS(${linkExpr}) - ${OB_SINGLE_LINK_BASE} ELSE ABS(${linkExpr}) END)`;
 }
 
 /**
@@ -228,14 +231,14 @@ export function isValueBetLink(link) {
 /** 比例 9999 单边：负时间戳且非正 EV */
 export function isSingleLegRateLink(link) {
   const n = Number(link);
-  return Number.isFinite(n) && n < 0 && Math.abs(n) < LOW_ODDS_LINK_BASE;
+  return Number.isFinite(n) && n < 0 && Math.abs(n) < OB_SINGLE_LINK_BASE;
 }
 
 /**
- * SaveOrder 已确认的客户端分组 link（套利 / 正 EV / 9999），同步时不得被场馆占位覆盖。
+ * SaveOrder 已确认的客户端分组 link（套利 / 正 EV / 9999 / LOS / OB 单边），同步时不得被场馆占位覆盖。
  */
 export function isConfirmedClientBindLink(link) {
-  return isArbBindLink(link) || isValueBetLink(link) || isSingleLegRateLink(link) || isLowOddsSingleLink(link);
+  return isArbBindLink(link) || isValueBetLink(link) || isSingleLegRateLink(link) || isLowOddsSingleLink(link) || isObSingleLink(link);
 }
 
 /** 套利 linkId 与场馆 create_at 允许偏差（SaveOrderBind 用 Date.now()，通常 ≤ 数秒） */

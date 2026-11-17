@@ -3,6 +3,7 @@ import type { ViewBet, ViewMatch } from "@/models/match";
 import type { AccountStoreContext } from "@/stores/account/context";
 import type { PlatformId } from "@/types/esport";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { isObSingleLink, orderLinkSortKey } from "@changmen/client-core/shared/format";
 import { PlatformAccount } from "@/models/platformAccount";
 import { markGtcSuccess } from "@/orderModes/gtc/successMarkers";
 import { getProviders, pickAccount } from "@/stores/account/accountPicker";
@@ -92,7 +93,9 @@ it.each([["OB", "RAY"], ["Polymarket", "OB"], ["RAY", "PB"]] as const)("OB mode 
   expect(ready?.accountA).toBe(fixture.accounts[0]); expect(ready?.accountB).toBe(fixture.accounts[1]);
   expect(ready?.singleLegByRate).toBe(false);
   expect(ready?.lowOddsMarketKeys).toBeUndefined();
-  expect(ready?.linkId).toBeGreaterThan(0);
+  expect(isObSingleLink(ready?.linkId)).toBe(a === "OB" || b === "OB");
+  expect(orderLinkSortKey(ready?.linkId)).toBeGreaterThan(1_000_000_000_000);
+  if (a !== "OB" && b !== "OB") expect(ready?.linkId).toBeGreaterThan(0);
 });
 
 it("OB mode skips an OB pair when the peer only has a 9999 account", async () => {

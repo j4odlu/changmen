@@ -9,6 +9,14 @@ import {
 } from "@/shared/linkDisplay";
 
 describe("linkDisplay", () => {
+  it("keeps OB single labels on active and historical order groups", () => {
+    const link = -(5e15 + 1_781_000_000_123);
+    expect(resolveLinkKindBadge(link)).toMatchObject({ source: "obSingle", label: "OB单边" });
+    expect(formatActiveBetLinkLabel(link)).toBe("Link 000123 · OB单边");
+    expect(resolveOrderGroupKindBadge([
+      { Link: link, Type: "OB", OrderID: "ob1", Status: "Win" } as never,
+    ])?.label).toBe("OB单边");
+  });
   it("resolveLinkKindBadge maps arb/single/valueBet/hash", () => {
     expect(resolveLinkKindBadge(1_781_000_000_000)?.label).toBe("套利");
     expect(resolveLinkKindBadge(-1_781_000_000_000)?.label).toBe("单边");

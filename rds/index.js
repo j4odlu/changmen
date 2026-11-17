@@ -293,6 +293,8 @@ export {
   ARB_LINK_CREATE_AT_TOLERANCE_MS,
   ARB_LINK_MIN,
   VALUE_BET_LINK_BASE,
+  OB_SINGLE_LINK_BASE,
+  isObSingleLink,
   backendBindLinkFromCreateAt,
   CLIENT_ORDER_LIST_SQL,
   canRebindLinkNewerToOlder,

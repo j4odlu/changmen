@@ -6,6 +6,11 @@ function event(kind: OrderObservationEvent["kind"], patch: Partial<OrderObservat
   return { version: 1, eventId: "event-123", ownerUserId: "u1", sequence: 1, occurredAt: 1000, linkId: 123, attemptId: "attempt-1", kind, ...patch };
 }
 describe("实时进度只读摘要", () => {
+  it("recovers OB single mode from the bound Link", () => {
+    const run = { linkId: -(5e15 + 1_700_000_000_000) };
+    expect(activeBetRunMode(run)).toBe("obSingle");
+    expect(activeBetRunModeLabel(run)).toBe("OB 单边下单");
+  });
   it("uses the attempt's OB mode rather than interpreting its ordinary Link as dual-leg arbitrage", () => {
     const run = { mode: "obSingle" as const, linkId: 1_700_000_000_000 };
     expect(activeBetRunMode(run)).toBe("obSingle");

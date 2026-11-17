@@ -1,4 +1,4 @@
-import { isObSingleLink, orderLinkSortKey } from "@changmen/db/order_link_filter.js";
+import { isManualLink, isObSingleLink, orderLinkSortKey } from "@changmen/db/order_link_filter.js";
 
 export const ARB_LINK_MIN = 1_000_000_000_000;
 export const DEFAULT_LOG_PADDING_MS = 180_000;
@@ -10,6 +10,8 @@ export function linkTypeLabel(link) {
     return "未知";
   if (isObSingleLink(n))
     return "OB单边";
+  if (isManualLink(n))
+    return "手动";
   if (n < 0)
     return "单边";
   if (n >= ARB_LINK_MIN)
@@ -21,6 +23,8 @@ export function groupMetaLabel(link, orderCount) {
   const n = Number(link);
   if (isObSingleLink(n))
     return "OB单边";
+  if (isManualLink(n))
+    return "手动";
   if (Number.isFinite(n) && n < 0)
     return "单边";
   if (orderCount > 1 && Number.isFinite(n) && n >= ARB_LINK_MIN) {

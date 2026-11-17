@@ -4,7 +4,7 @@
  */
 import { toDateKey } from "./date_key.js";
 import { isPredictionSellForCount } from "./kinds.js";
-import { LOW_ODDS_LINK_BASE, OB_SINGLE_LINK_BASE, VALUE_BET_LINK_BASE } from "@changmen/shared/order_link_encoding";
+import { LOW_ODDS_LINK_BASE, MANUAL_LINK_BASE, OB_SINGLE_LINK_BASE, VALUE_BET_LINK_BASE } from "@changmen/shared/order_link_encoding";
 
 /** 与 @changmen/db order_link_filter 对齐，避免本文件依赖被整包 mock 的 @changmen/db */
 const ARB_LINK_MIN = 1_000_000_000_000;
@@ -13,7 +13,8 @@ function linkHomeTs(link) {
   const n = Math.abs(Number(link)) || 0;
   const ts = n >= VALUE_BET_LINK_BASE ? n - VALUE_BET_LINK_BASE
     : n >= LOW_ODDS_LINK_BASE ? n - LOW_ODDS_LINK_BASE
-      : n >= OB_SINGLE_LINK_BASE ? n - OB_SINGLE_LINK_BASE : n;
+      : n >= OB_SINGLE_LINK_BASE ? n - OB_SINGLE_LINK_BASE
+        : n >= MANUAL_LINK_BASE ? n - MANUAL_LINK_BASE : n;
   return ts >= ARB_LINK_MIN ? ts : 0;
 }
 

@@ -11,6 +11,7 @@ import { useAccountStore } from "@/stores/accountStore";
 import { useOrderStore } from "@/stores/orderStore";
 import { observedRayOrders } from "@/runtime/orderMonitoring/rayOrders";
 import { toOrderDateKeyLocal } from "@/shared/orderLink";
+import { isManualLink } from "@changmen/client-core/shared/format";
 
 interface Submission {
   account: PlatformAccount;
@@ -147,6 +148,18 @@ export function observeRaySubmissionDisplays(account: PlatformAccount, orders: r
       continue;
     ordersById.set(orderKey(account, order.orderId), { ...order });
     submissions.set(key, { ...submission, orderId: order.orderId });
+  }
+}
+
+/** [changmen 扩展] 正常拉单保存前，仅给已精确认领的手动原单补充 Link。 */
+export function stampRayManualSubmissionLinks(account: PlatformAccount, orders: VenueOrder[], startedAt: number): void {
+  observeRaySubmissionDisplays(account, orders, startedAt);
+  for (const submission of submissions.values()) {
+    if (submission.account !== account || !submission.current() || !isManualLink(submission.linkId) || !submission.orderId)
+      continue;
+    const order = orders.find(order => order.provider === "RAY" && order.orderId === submission.orderId);
+    if (order && matchesSubmission(submission, order) && (!order.link || order.link === order.createAt || order.link === order.createAt - 1))
+      order.link = submission.linkId;
   }
 }
 

@@ -2,7 +2,7 @@
 import type { AdminOrderRow } from "@/types/admin";
 import { computed, ref } from "vue";
 import AdminOrderLogsDialog from "@/components/admin/AdminOrderLogsDialog.vue";
-import { formatLinkId, isObSingleLink, isSingleLegLink, isValueBetLink } from "@changmen/client-core/shared/format";
+import { formatLinkId, isManualLink, isObSingleLink, isSingleLegLink, isValueBetLink } from "@changmen/client-core/shared/format";
 import { formatLinkIdFull } from "@/shared/linkDisplay";
 import { adminOrderBetMoneyCny, adminOrderMoneyCny, isAdminPredictionSell, sumAdminOrdersMoneyCny } from "@/shared/adminOrderMoney";
 import { resolveOrderItemLabel } from "@/shared/orderItemDisplay";
@@ -90,6 +90,8 @@ function groupMetaLabel(rows: AdminOrderRow[]) {
     return "正EV";
   if (isObSingleLink(link))
     return "OB单边";
+  if (isManualLink(link))
+    return "手动";
   if (isSingleLegLink(link))
     return "单边";
   if (groupIsLinked(rows))

@@ -3,10 +3,11 @@ import type { BetSide, ViewBet, ViewBetItem, ViewMatch } from "@/models/match";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { useAccountStore } from "@/stores/accountStore";
 import { wait } from "@changmen/client-core/shared/wait";
+import { createManualLinkId } from "@changmen/client-core/shared/format";
 import { isPendingConfirmVenueProvider } from "@changmen/shared/account_multiply";
 import { ElMessageBox } from "element-plus";
 import { manualBetToastSeconds } from "@/shared/betTiming";
-import { refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
+import { bindArbOrderId, refreshOrderListAfterBind } from "@/stores/betting/arbOrderBind";
 import { buildManualBetCheckFailureHtml } from "@/stores/betting/manualBetAlert";
 import { markSuccessfulBet } from "@/stores/betting/successMarkers";
 
@@ -21,9 +22,11 @@ export interface ManualExecutionContext {
   accountStore: ReturnType<typeof useAccountStore>;
 }
 
-/** FOK execution body is frozen to the pre-GTC baseline. */
+/** [changmen 扩展] 手动 FOK 仅增加来源关联，金额与执行条件沿用原链路。 */
 export async function executeManualFok(account: PlatformAccount, option: BetOption, context: ManualExecutionContext): Promise<void> {
   const { match, bet, item, side, odds, amount, setMessage, accountStore } = context;
+  const linkId = createManualLinkId();
+  option.diagnosticLinkId = linkId;
   const toastSec = manualBetToastSeconds();
   // [changmen 扩展] 手动金额仅换算币种，不应用自动下注的账号比例（含 9999）。
   option = await accountStore.checkBetting(account, option, { skipAccountRate: true });
@@ -56,8 +59,10 @@ export async function executeManualFok(account: PlatformAccount, option: BetOpti
       const optimisticOk = Boolean(
         (result.tip as { pmOptimisticSaved?: boolean } | null | undefined)?.pmOptimisticSaved,
       );
-      const identityOpts = option.clientMarket && result.orderId
-        ? { pendingBindMarket: option.clientMarket, pendingBindOrderId: String(result.orderId) } : undefined;
+      // 无原单号时不套用 orders[0]；RAY 由已有的原单身份核验补充来源。
+      const orderId = String(result.orderId ?? "").trim();
+      const identityOpts = orderId
+        ? { pendingBindLinkId: linkId, pendingBindMarket: option.clientMarket, pendingBindOrderId: orderId } : undefined;
       if (result.pending || provider !== "Polymarket") {
         await wait(result.orderId ? 400 : 1500);
         await accountStore.updateVenueOrders(account, ...(identityOpts ? [identityOpts] : []));
@@ -73,6 +78,8 @@ export async function executeManualFok(account: PlatformAccount, option: BetOpti
       else {
         void accountStore.updateVenueOrders(account, ...(identityOpts ? [identityOpts] : []));
       }
+      if (orderId)
+        await bindArbOrderId(linkId, account.provider, account.accountId, orderId, option.clientMarket);
       refreshOrderListAfterBind();
     }
     catch {

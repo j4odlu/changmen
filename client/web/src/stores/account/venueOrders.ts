@@ -9,6 +9,7 @@ import { truncateShareUsdtAmount } from "@/shared/pfOrderDisplay";
 import { saveOrders } from "@/api/order";
 import { getProvider } from "@/runtime/providers";
 import { isObSportBetToken, sportObSessionFromAccount } from "@/runtime/obSportBetAccount";
+import { stampRayManualSubmissionLinks } from "@/runtime/rayOrderMonitor/submissionDisplay";
 
 /** PM 下单后等 CLOB trades 索引：最多尝试次数 / 间隔 */
 const WAIT_FOR_ORDER_ATTEMPTS_DEFAULT = 5;
@@ -178,7 +179,9 @@ export async function syncVenueOrders(
   const gapMs = Math.max(0, Number(opts?.waitForOrderGapMs) || WAIT_FOR_ORDER_GAP_MS_DEFAULT);
 
   let orders: VenueOrder[] | undefined;
+  let fetchedAt = 0;
   for (let attempt = 1; attempt <= attempts; attempt++) {
+    fetchedAt = Date.now();
     const raw = await provider.getOrders(account);
     if (raw == null) {
       // 保留上一轮成功结果；首轮失败则整体失败
@@ -200,6 +203,8 @@ export async function syncVenueOrders(
 
   // [A8 可证实] uv.updateOrders 在保存之前持有 e；底层同步仍保留失败抛错的约定。
   onFetchedOrders?.(orders);
+  if (account.provider === "RAY")
+    stampRayManualSubmissionLinks(account, orders, fetchedAt);
   stampPendingBindLink(orders, opts);
   applyUnsettledStats(account, orders);
   if (String(account.provider ?? "").trim() !== "PredictFun")

@@ -73,6 +73,17 @@ describe("persistPolymarketExecutionReject", () => {
     expect(refreshOrderListAfterBind).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the manual source on a posted rejection without explicit bind options", async () => {
+    const result = Object.assign(new BetResult("Polymarket", false, "fail"), {
+      beginTime: 1_700_000_000_000, tip: { pmPosted: true },
+      request: { order: { side: "BUY", makerAmount: "10000000" } },
+    });
+    const option = new BetOption("Polymarket", "m1", "b1", "i1", 10, "Home", 2);
+    option.diagnosticLinkId = -(4e15 + result.beginTime);
+    const saved = await persistPolymarketExecutionReject({ provider: "Polymarket", accountId: 9 } as never, result, "api_failed", { betOption: option });
+    expect(saved?.link).toBe(option.diagnosticLinkId);
+  });
+
   it("maps Away to awayName on reject", async () => {
     const account = { provider: "Polymarket", accountId: 3 } as never;
     const result = Object.assign(new BetResult("Polymarket", true), {

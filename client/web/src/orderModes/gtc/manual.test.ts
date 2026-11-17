@@ -3,6 +3,7 @@ import type { GtcOrderPlan } from "@changmen/shared/pm_gtc_order";
 import type { GtcOrderRecord, GtcOrderContext, GtcOrderCommand } from "./core/orderRecord";
 import { applyGtcOrderCommand, createGtcOrderRecord } from "./core/orderRecord";
 import { BetResult } from "@changmen/client-core/models/betResult";
+import { isManualLink } from "@changmen/client-core/shared/format";
 import { Currency, getExchange } from "@changmen/shared/currency";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { executeManualGtc } from "./manual";
@@ -78,6 +79,7 @@ describe("manual GTC uses a single-order record", () => {
     expect(mocks.submit).toHaveBeenCalledOnce(); expect(mocks.check).toHaveBeenCalledWith(account, expect.anything(), { skipAccountRate: true, manual: true });
     expect(result).toMatchObject({ formatVersion: 2, orderType: "GTC", submit: "accepted", matched: "0", open: "10", submissionClosed: true, context: { item: "A" } });
     expect(result).not.toHaveProperty("other"); expect(result.plan).not.toHaveProperty("otherPlayerId"); expect(result.plan).not.toHaveProperty("source");
+    expect(isManualLink(result.context.linkId)).toBe(true);
     expect(ctx.setMessage).not.toHaveBeenCalled(); expect(notices.close).toHaveBeenCalledOnce();
     expect(notices.notify).toHaveBeenNthCalledWith(1, expect.objectContaining({ position: "top-right", customClass: "notification loading Polymarket", message: expect.stringContaining("金额：5@2") }));
     expect(notices.notify).toHaveBeenNthCalledWith(2, expect.objectContaining({ position: "top-right", type: "warning", duration: 10_000, message: expect.stringContaining("未成交挂单中") }));

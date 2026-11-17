@@ -295,6 +295,8 @@ export {
   VALUE_BET_LINK_BASE,
   OB_SINGLE_LINK_BASE,
   isObSingleLink,
+  isManualLink,
+  MANUAL_LINK_BASE,
   backendBindLinkFromCreateAt,
   CLIENT_ORDER_LIST_SQL,
   canRebindLinkNewerToOlder,

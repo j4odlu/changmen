@@ -3,6 +3,7 @@ import type { ViewBet, ViewMatch } from "@/models/match";
 import type { PlatformAccount } from "@/models/platformAccount";
 import type { GtcOrderRecord } from "./core/orderRecord";
 import { BetResult } from "@changmen/client-core/models/betResult";
+import { createManualLinkId } from "@changmen/client-core/shared/format";
 import { getExchange, resolveAccountCurrency } from "@changmen/shared/currency";
 import { getAuthSessionVersion, isAuthSessionCurrent } from "@/api/client";
 import { useUserStore } from "@/stores/userStore";
@@ -44,7 +45,7 @@ export async function executeManualGtc(account: PlatformAccount, input: BetOptio
     const fx = getExchange(resolveAccountCurrency(account.provider, account.currency));
     if (option.stakeExchange != null && option.stakeExchange !== fx)
       throw new Error("PM 手动 GTC 金额币种不一致，未发送订单");
-    const linkId = -Date.now();
+    const linkId = createManualLinkId();
     const order = await submitGtcOrder(account, prepared, {
       linkId,
       clientMarket: option.clientMarket,

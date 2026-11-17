@@ -34,7 +34,7 @@ function contextFromBetOption(
   option: BetOption | undefined,
   linkId?: number,
 ): PolymarketRejectOrderContext {
-  const link = Number(linkId) || 0;
+  const link = Number(linkId ?? option?.diagnosticLinkId) || 0;
   if (!option) {
     return link ? { link } : {};
   }

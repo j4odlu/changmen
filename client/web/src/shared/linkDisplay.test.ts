@@ -9,6 +9,13 @@ import {
 } from "@/shared/linkDisplay";
 
 describe("linkDisplay", () => {
+  it("shows manual badges on active and persisted order groups", () => {
+    const link = -(4e15 + 1_781_000_000_123);
+    expect(resolveLinkKindBadge(link)).toMatchObject({ source: "manual", label: "手动" });
+    expect(formatActiveBetLinkLabel(link)).toBe("Link 000123 · 手动");
+    expect(resolveOrderGroupKindBadge([{ Link: link, Type: "Polymarket", OrderID: "manual" } as never])?.label).toBe("手动");
+    expect(isUnboundPlaceholderLink(link)).toBe(false);
+  });
   it("keeps OB single labels on active and historical order groups", () => {
     const link = -(5e15 + 1_781_000_000_123);
     expect(resolveLinkKindBadge(link)).toMatchObject({ source: "obSingle", label: "OB单边" });

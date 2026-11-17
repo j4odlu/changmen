@@ -66,7 +66,7 @@ describe("group_home", () => {
 
 describe("single-leg strategy booking dates", () => {
   const at = Date.parse("2026-10-22T23:59:00+08:00");
-  it.each([5_000_000_000_000_000, 6_000_000_000_000_000, 7_000_000_000_000_000, 0])("restores the original date for negative Link base %s", base => {
+  it.each([4_000_000_000_000_000, 5_000_000_000_000_000, 6_000_000_000_000_000, 7_000_000_000_000_000, 0])("restores the original date for negative Link base %s", base => {
     const order = { link: -(base + at), create_at: at + 86_400_000, user_id: "owner", provider: "RAY", money: 10 };
     expect(groupHomeTsFromRaw([order])).toBe(at);
     const groups = [];

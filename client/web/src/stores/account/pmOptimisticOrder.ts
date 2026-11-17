@@ -26,6 +26,8 @@ export async function persistPolymarketMatchedBuyOrder(
   if (submission?.orderId === order.orderId && submission.takerAmount)
     order.pmOrderPrice = Number(submission.makerAmount) / Number(submission.takerAmount);
   order.clientMarket = option.clientMarket;
+  if (option.diagnosticLinkId)
+    order.link = option.diagnosticLinkId;
   await saveOrders(account, [order]);
   return order;
 }

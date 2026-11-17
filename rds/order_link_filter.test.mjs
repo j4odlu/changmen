@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
 import {
+  MANUAL_LINK_BASE,
+  isManualLink,
   OB_SINGLE_LINK_BASE,
   isObSingleLink,
   ARB_LINK_MIN,
@@ -35,6 +37,19 @@ import {
 } from "./order_link_filter.js";
 
 describe("order_link_filter", () => {
+  it("preserves manual binds and decodes their booking time without treating them as 9999", () => {
+    const at = Date.parse("2026-11-18T23:59:00+08:00");
+    const link = -(MANUAL_LINK_BASE + at);
+    assert.equal(isManualLink(link), true);
+    assert.equal(isSingleLegRateLink(link), false);
+    assert.equal(isObSingleLink(link), false);
+    assert.equal(isLowOddsSingleLink(link), false);
+    assert.equal(isValueBetLink(link), false);
+    assert.equal(isConfirmedClientBindLink(link), true);
+    assert.equal(orderLinkSortKey(link), at);
+    assert.equal(orderBelongsToMsRange(link, at + 86400000, at - 1000, at + 1000), true);
+    assert.match(sqlOrderBelongsToRange(1, 2), /4000000000000000/);
+  });
   it("isHashLink detects placeholder links", () => {
     assert.equal(isHashLink(12345), true);
     assert.equal(isHashLink(1_000_000_000_001), false);

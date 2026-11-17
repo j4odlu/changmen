@@ -14,9 +14,17 @@ option.newOdds = 2;
 option.data = { limitPrice: 0.51 };
 beforeEach(() => {
   vi.resetAllMocks();
+  option.diagnosticLinkId = undefined;
   io.save.mockResolvedValue(undefined);
   io.build.mockResolvedValue({ provider: "Polymarket", orderId: "original", odds: 2,
     pmFillPrice: 0.5044, pmShares: 10, pmStakeUsdc: 5.044 } as VenueOrder);
+});
+
+it("persists the manual Link on the first optimistic save", async () => {
+  option.diagnosticLinkId = -(4e15 + 1790000000000);
+  const saved = await persistPolymarketMatchedBuyOrder(account, option, result());
+  expect(saved?.link).toBe(option.diagnosticLinkId);
+  expect(io.save).toHaveBeenCalledWith(account, [expect.objectContaining({ link: option.diagnosticLinkId })]);
 });
 
 function result() {

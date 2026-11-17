@@ -54,7 +54,7 @@ describe("backend order lookup extraction preserves its original implementation"
 });
 
 describe("user_log_lookup", () => {
-  it.each([5e15, 6e15, 7e15])("decodes the log window for single-leg Link base %s", base => {
+  it.each([4e15, 5e15, 6e15, 7e15])("decodes the log window for single-leg Link base %s", base => {
     const ts = 1_781_802_360_547;
     const link = -(base + ts);
     expect(computeLogWindow([{ link, create_at: ts + 1000 }], 60_000))
@@ -62,6 +62,10 @@ describe("user_log_lookup", () => {
     if (base === 5e15) {
       expect(linkTypeLabel(link)).toBe("OB单边");
       expect(groupMetaLabel(link, 1)).toBe("OB单边");
+    }
+    if (base === 4e15) {
+      expect(linkTypeLabel(link)).toBe("手动");
+      expect(groupMetaLabel(link, 1)).toBe("手动");
     }
   });
   it("never attaches a conflicting explicit Link result to the previous check", () => {

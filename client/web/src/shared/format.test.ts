@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  createManualLinkId,
+  isManualLink,
   createObSingleLinkId,
   isObSingleLink,
   createLowOddsSingleLinkId,
@@ -23,6 +25,22 @@ import {
 } from "@changmen/client-core/shared/format";
 
 describe("format shared helpers", () => {
+  it("keeps manual orders separate from all automatic sources and restores their timestamp", () => {
+    const at = 1_792_680_000_123;
+    const link = createManualLinkId(at);
+    expect(Number.isSafeInteger(link)).toBe(true);
+    expect(formatLinkId(link)).toBe("手动");
+    expect(classifyLinkId(link)).toBe("manual");
+    expect(linkIdSourceLabel("manual")).toBe("手动");
+    expect(isManualLink(link)).toBe(true);
+    expect(isSingleLegRateLink(link)).toBe(false);
+    expect(isObSingleLink(link)).toBe(false);
+    expect(isLowOddsSingleLink(link)).toBe(false);
+    expect(isValueBetLink(link)).toBe(false);
+    expect(orderLinkSortKey(link)).toBe(at);
+    for (const other of [at, -at, createObSingleLinkId(at), createLowOddsSingleLinkId(at), createValueBetLinkId(at), 0, Number.NaN])
+      expect(isManualLink(other)).toBe(false);
+  });
   it("identifies OB single orders independently and restores their original timestamp", () => {
     const at = 1_792_680_000_123;
     const link = createObSingleLinkId(at);

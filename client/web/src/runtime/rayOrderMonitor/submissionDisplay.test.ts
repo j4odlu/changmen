@@ -8,7 +8,7 @@ import { shallowReactive } from "vue";
 import { getProvider } from "@/runtime/providers";
 import { beginRayOrderObservation, observedRayOrders, resetRayOrderResults } from "@/runtime/orderMonitoring/rayOrders";
 import { startRayOrderMonitoring, stopRayOrderMonitoring } from "./runtime";
-import { beginRaySubmissionDisplay, observeRaySubmissionDisplays, projectRaySubmissionDisplays, retireRaySubmissionDisplays } from "./submissionDisplay";
+import { beginRaySubmissionDisplay, observeRaySubmissionDisplays, projectRaySubmissionDisplays, retireRaySubmissionDisplays, stampRayManualSubmissionLinks } from "./submissionDisplay";
 import { useRayOrderContextStore } from "./contextStore";
 import { registerRayOrderContext } from "./contexts";
 import { rayProvider, lookupRayNativeOrderDisplay } from "@changmen/venue-browser/adapter/ray/bet";
@@ -62,6 +62,26 @@ afterEach(() => {
   expect(mock.save).not.toHaveBeenCalled(); expect(mock.bind).not.toHaveBeenCalled(); expect(mock.refresh).not.toHaveBeenCalled();
   expect(mock.makeup).toHaveBeenCalledTimes(mock.expectedMakeup); expect(mock.profit).toHaveBeenCalledTimes(mock.expectedProfit);
   stopRayOrderMonitoring(); vi.useRealTimers();
+});
+
+it("stamps only the uniquely identified manual RAY order before normal persistence", () => {
+  const input = option(); input.diagnosticLinkId = -(4e15 + now);
+  beginRaySubmissionDisplay(account(), input)!(new BetResult("RAY", true));
+  const old = venue("baseline-old"); const actual = venue("manual-new");
+  stampRayManualSubmissionLinks(account(), [old, actual], now);
+  expect(old.link).toBeUndefined(); expect(actual.link).toBe(input.diagnosticLinkId);
+});
+
+it.each(["no-baseline", "ambiguous", "automatic", "already-bound"])("does not guess a manual RAY Link: %s", scenario => {
+  if (scenario === "no-baseline") resetRayOrderResults();
+  const input = option();
+  if (scenario !== "automatic") input.diagnosticLinkId = -(4e15 + now);
+  beginRaySubmissionDisplay(account(), input)!(new BetResult("RAY", true));
+  const actual = venue("new");
+  if (scenario === "already-bound") actual.link = now - 1000;
+  const before = actual.link;
+  stampRayManualSubmissionLinks(account(), [venue("baseline-old"), actual, ...(scenario === "ambiguous" ? [venue("new-2")] : [])], now);
+  expect(actual.link).toBe(before);
 });
 
 it("starts immediately after a successful main-loop submission while confirmation is still active, without awaiting the read", async () => {

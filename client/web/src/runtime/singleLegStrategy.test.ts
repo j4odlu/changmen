@@ -30,7 +30,7 @@ describe("single-leg frontend monitor", () => {
     stores.orders.orders.set(-time, [row(), row({ OrderID: "los", Link: -(6000000000000000 + time) }),
       row({ OrderID: "arb", Link: time }), row({ OrderID: "ev", Link: -(7000000000000000 + time) }),
       row({ OrderID: "ob-single", Link: -(5000000000000000 + time) }),
-      row({ OrderID: "manual", Link: 0 }), row({ OrderID: "sell", PmSide: "sell" }),
+      row({ OrderID: "manual", Link: -(4000000000000000 + time) }), row({ OrderID: "sell", PmSide: "sell" }),
       row({ OrderID: "pf-sell", PfSide: "sell" }), row({ OrderID: "preview", DisplayOnly: true })]);
     const strategy = vi.fn();
     scope.run(() => setupSingleLegStrategy(strategy));

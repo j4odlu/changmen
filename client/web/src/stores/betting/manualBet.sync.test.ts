@@ -13,6 +13,7 @@ import { PlatformAccount } from "@/models/platformAccount";
 import { incrementBetCount, setLastBetOdds } from "@/shared/betTiming";
 import { runManualBet } from "@/stores/betting/manualBet";
 import { useOddsStore } from "@/stores/oddsStore";
+import { isManualLink } from "@changmen/client-core/shared/format";
 
 const updateVenueOrders = vi.hoisted(() => vi.fn(async () => []));
 const refreshBalance = vi.hoisted(() => vi.fn(async () => undefined));
@@ -33,6 +34,7 @@ const betting = vi.hoisted(() => vi.fn(async (): Promise<{
 })));
 const getAccount = vi.hoisted(() => vi.fn());
 const refreshOrderListAfterBind = vi.hoisted(() => vi.fn());
+const bindArbOrderId = vi.hoisted(() => vi.fn(async () => true));
 const markSuccessfulBet = vi.hoisted(() => vi.fn());
 const wait = vi.hoisted(() => vi.fn(async () => undefined));
 const prompt = vi.hoisted(() => vi.fn(async (_message?: unknown, _title?: string, _options?: unknown) => ({ value: "25" })));
@@ -57,6 +59,7 @@ vi.mock("@/stores/matchStore", () => ({
 }));
 vi.mock("@/stores/betting/arbOrderBind", () => ({
   refreshOrderListAfterBind,
+  bindArbOrderId,
 }));
 vi.mock("@/stores/betting/successMarkers", () => ({
   markSuccessfulBet,
@@ -85,6 +88,7 @@ describe("runManualBet post-success sync", () => {
     updateVenueOrders.mockClear();
     refreshBalance.mockClear();
     refreshOrderListAfterBind.mockClear();
+    bindArbOrderId.mockClear();
     markSuccessfulBet.mockClear();
     wait.mockClear();
     betting.mockClear();
@@ -123,7 +127,10 @@ describe("runManualBet post-success sync", () => {
 
     expect(wait).not.toHaveBeenCalled();
     expect(updateVenueOrders).toHaveBeenCalledOnce();
-    expect(updateVenueOrders).toHaveBeenCalledWith(expect.anything());
+    const option = checkBetting.mock.calls[0]![1] as { diagnosticLinkId: number };
+    expect(isManualLink(option.diagnosticLinkId)).toBe(true);
+    expect(updateVenueOrders).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ pendingBindLinkId: option.diagnosticLinkId, pendingBindOrderId: "0xabc" }));
+    expect(bindArbOrderId).toHaveBeenCalledWith(option.diagnosticLinkId, "Polymarket", 1, "0xabc", undefined);
     expect(refreshOrderListAfterBind).toHaveBeenCalledOnce();
     expect(refreshBalance).toHaveBeenCalledOnce();
     expect(markSuccessfulBet).toHaveBeenCalledOnce();
@@ -219,7 +226,7 @@ describe("runManualBet post-success sync", () => {
     await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
 
     expect(wait).toHaveBeenCalledWith(400);
-    expect(updateVenueOrders).toHaveBeenCalledWith(expect.anything());
+    expect(updateVenueOrders).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ pendingBindLinkId: expect.any(Number), pendingBindOrderId: "0xdelayed" }));
   });
 
   it("pM matched without optimistic tip: falls back to waitForOrderId", async () => {
@@ -248,8 +255,20 @@ describe("runManualBet post-success sync", () => {
     expect(wait).toHaveBeenCalledWith(400);
     expect(updateVenueOrders).toHaveBeenCalledWith(
       expect.anything(),
-      { waitForOrderId: "0xfallback" },
+      expect.objectContaining({ waitForOrderId: "0xfallback", pendingBindLinkId: expect.any(Number), pendingBindOrderId: "0xfallback" }),
     );
+  });
+
+  it("does not bind an arbitrary historical order when the venue returns no order ID", async () => {
+    getAccount.mockReturnValue(manualTestAccount("RAY"));
+    betting.mockResolvedValueOnce({ success: true, orderId: "" });
+    const match = { title: "A vs B", game: "CS" } as ViewMatch;
+    const bet = { id: 1, homeName: "A", awayName: "B", getBetName: () => "Map 1" } as ViewBet;
+    const item = { type: "RAY", matchId: "m1", betId: "b1", getOdds: () => 2, getItemId: () => "i1" } as unknown as ViewBetItem;
+    await runManualBet(match, bet, item, "Home", { setMessage: vi.fn() });
+    expect(updateVenueOrders).toHaveBeenCalledWith(expect.anything());
+    expect(bindArbOrderId).not.toHaveBeenCalled();
+    expect(isManualLink((checkBetting.mock.calls[0]![1] as { diagnosticLinkId: number }).diagnosticLinkId)).toBe(true);
   });
 
   it("[A8 可证实] manual FOK still opens and executes on maps excluded by prematch-full mode", async () => {

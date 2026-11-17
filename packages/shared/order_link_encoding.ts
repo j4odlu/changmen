@@ -3,6 +3,17 @@
 export const VALUE_BET_LINK_BASE = 7_000_000_000_000_000;
 export const LOW_ODDS_LINK_BASE = 6_000_000_000_000_000;
 export const OB_SINGLE_LINK_BASE = 5_000_000_000_000_000;
+export const MANUAL_LINK_BASE = 4_000_000_000_000_000;
+
+/** [changmen 扩展] 客户端手动下单，独立于自动单边策略。 */
+export function isManualLink(link: number | null | undefined): boolean {
+  const n = Number(link);
+  return Number.isFinite(n) && n < 0 && Math.abs(n) >= MANUAL_LINK_BASE && Math.abs(n) < OB_SINGLE_LINK_BASE;
+}
+
+export function createManualLinkId(ts = Date.now()): number {
+  return -(MANUAL_LINK_BASE + ts);
+}
 
 /** 含 OB 仅下 OB：独立于比例 9999、LOS 和正 EV。 */
 export function isObSingleLink(link: number | null | undefined): boolean {

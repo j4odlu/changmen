@@ -44,6 +44,7 @@ else {
   );
 }
 extensionPrefs.value.arbExecutionMode ??= "normal";
+extensionPrefs.value.obSingleBetMoney ??= 0;
 extensionPrefs.value.lowOddsSingleHigherCProbabilityOnly ??= false;
 extensionPrefs.value.singleLeg9999MaxPerMap ??= 1;
 extensionPrefs.value.singleLeg9999HigherCProbabilityOnly ??= false;
@@ -156,7 +157,14 @@ async function save() {
           </div>
         </div>
         <p>选中的套利组合包含 OB 时，两腿预检通过后仅提交 OB，对冲腿按配置跳过。不含 OB 时按普通模式执行。</p>
-        <p>OB 金额、下注次数和间隔沿用现有设置，不套用 LOS 的每盘口一次和 C 行筛选。</p>
+        <el-form label-position="left" label-width="100px" aria-label="仅下 OB 金额配置">
+          <el-form-item label="买入金额">
+            <el-input-number v-model="extensionPrefs.obSingleBetMoney" :min="0" :step="10" :precision="2" controls-position="right" class="extensions-tab__num" aria-label="仅下OB买入金额" />
+            <span class="extensions-tab__unit">元；0 = 沿用参数配置的买入金额</span>
+          </el-form-item>
+        </el-form>
+        <p>沿用参数配置的金额模式，按两边赔率分配，OB 使用本腿金额；随机买入开启时优先使用随机区间。高利润加仓、账号比例及取整仍生效。</p>
+        <p>下注次数和间隔沿用现有设置，不套用 LOS 的每盘口一次和 C 行筛选。</p>
         <p>这是套利信号触发的 OB 单边下注，存在单边敞口。含 OB 时不与 9999 单边组合，两腿均须有可用账号。</p>
       </div>
       <p v-else class="execution-mode__normal-note">按原有下注设置执行。</p>

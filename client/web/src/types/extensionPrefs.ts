@@ -220,6 +220,8 @@ export interface ValueBetMarkerPrefs {
 export interface ExtensionPrefs extends Record<string, unknown> {
   /** [changmen 扩展] 普通流程、双预检后仅下低赔腿，或含 OB 时仅下 OB。 */
   arbExecutionMode: "normal" | "lowOddsSingle" | "obSingle";
+  /** [changmen 扩展] 含 OB 仅下 OB 的初始买入金额；0 沿用参数配置，继续按原金额模式和赔率分配。 */
+  obSingleBetMoney: number;
   /** [changmen 扩展] LOS 低赔腿须同时为当前盘口 C 行赛前概率较高方；无有效数据或同值时跳过。 */
   lowOddsSingleHigherCProbabilityOnly: boolean;
   /** BetRow 套利划线、利润角标、赔率 flash、EV 标记（「界面」Tab） */
@@ -411,6 +413,7 @@ export function toggleArbAllowedPlatform(
 export function createDefaultExtensionPrefs(): ExtensionPrefs {
   return {
     arbExecutionMode: "normal",
+    obSingleBetMoney: 0,
     lowOddsSingleHigherCProbabilityOnly: false,
     betRowUi: false,
     pmPriceTrendUi: false,
@@ -566,12 +569,19 @@ function normalizePfArbPriceBuffer(raw: unknown): PfArbPriceBufferPrefs {
   };
 }
 
+export function normalizeObSingleBetMoney(raw: unknown): number {
+  const amount = Number(raw);
+  const cents = Math.round(amount * 100);
+  return Number.isSafeInteger(cents) && cents >= 0 ? cents / 100 : 0;
+}
+
 export function normalizeExtensionPrefs(raw: unknown): ExtensionPrefs {
   if (!raw || typeof raw !== "object" || Array.isArray(raw))
     return createDefaultExtensionPrefs();
   const row = raw as Record<string, unknown>;
   return {
     arbExecutionMode: row.arbExecutionMode === "lowOddsSingle" || row.arbExecutionMode === "obSingle" ? row.arbExecutionMode : "normal",
+    obSingleBetMoney: normalizeObSingleBetMoney(row.obSingleBetMoney),
     lowOddsSingleHigherCProbabilityOnly: row.lowOddsSingleHigherCProbabilityOnly === true,
     betRowUi: row.betRowUi === true,
     pmPriceTrendUi: row.pmPriceTrendUi === true,

@@ -7,6 +7,7 @@ import { BetOption } from "@changmen/client-core/models/betOption";
 import { sortOptionsByWinRate } from "@/shared/winRate";
 import type { DetectionQuoteSource } from "./quoteSource";
 import { capturePmPriceQuote } from "@/domain/polymarket/tickBufferQuote";
+import { obSingleStakeConfig } from "./obSingleStake";
 
 /** 对齐 A8 `IQ.GetOrderOptions`：选腿 + 对冲金额 + betSorting */
 export function buildOrderOptions(
@@ -17,6 +18,7 @@ export function buildOrderOptions(
   /** 对齐 A8 `Io().getProviders()` 的 keys */
   providerKeys: PlatformId[],
   quotes: DetectionQuoteSource,
+  obSingleBetMoney = 0,
 ): BetOption[] | undefined {
   const totalMode = config.betMoneyMode === "total";
   if (totalMode && (!Number.isFinite(config.betMoney) || config.betMoney <= 0))
@@ -26,7 +28,8 @@ export function buildOrderOptions(
     return undefined;
 
   const { homeItem, awayItem, homeOdds, awayOdds } = legs;
-  let betMoney = initialArbBaseStake(homeOdds, awayOdds, config);
+  const stakeConfig = obSingleStakeConfig(config, obSingleBetMoney, homeItem.type === "OB" || awayItem.type === "OB");
+  let betMoney = initialArbBaseStake(homeOdds, awayOdds, stakeConfig);
   const low = Math.min(homeOdds, awayOdds);
   const high = Math.max(homeOdds, awayOdds);
   let hedgeMoney = (low * betMoney) / high;
@@ -35,7 +38,7 @@ export function buildOrderOptions(
   else if (totalMode) {
     // [changmen 扩展] 以分为单位分配余款，避免两腿独立四舍五入后超出合计金额。
     const baseCents = Math.round(betMoney * 100);
-    const totalCents = Math.round(config.betMoney * 100);
+    const totalCents = Math.round(stakeConfig.betMoney * 100);
     betMoney = baseCents / 100;
     hedgeMoney = (totalCents - baseCents) / 100;
   }

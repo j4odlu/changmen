@@ -27,6 +27,7 @@ declare module "@changmen/client-core/models/match" {
       config: UserConfig,
       accounts?: PlatformAccount[],
       providerKeys?: PlatformId[],
+      obSingleBetMoney?: number,
     ): BetOption[] | undefined;
   }
 }
@@ -36,6 +37,7 @@ ViewBet.prototype.getOrderOptions = function (
   config: UserConfig,
   accounts: PlatformAccount[] = [],
   providerKeys: PlatformId[],
+  obSingleBetMoney = 0,
 ): BetOption[] | undefined {
-  return buildOrderOptions(this, match, config, accounts, providerKeys, storeQuoteSource);
+  return buildOrderOptions(this, match, config, accounts, providerKeys, storeQuoteSource, obSingleBetMoney);
 };

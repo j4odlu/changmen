@@ -30,6 +30,7 @@ const defaultValueBet = {
 
 const defaultPrefs = {
   arbExecutionMode: "normal" as const,
+  obSingleBetMoney: 0,
   lowOddsSingleHigherCProbabilityOnly: false,
   betRowUi: false,
   pmPriceTrendUi: false,
@@ -552,6 +553,14 @@ describe("extensionPrefs", () => {
       expect(normalizeExtensionPrefs({ arbExecutionMode: mode }).arbExecutionMode).toBe("normal");
     const prefs = normalizeExtensionPrefs({ arbExecutionMode: mode });
     expect(prefs.arbExecutionMode).toBe(mode);
+    expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs)))).toEqual(prefs);
+  });
+
+  it("round-trips the independent OB amount and defaults old or invalid data to follow the original stake", () => {
+    for (const amount of [undefined, null, -10, Number.NaN, Number.POSITIVE_INFINITY, "invalid"])
+      expect(normalizeExtensionPrefs({ obSingleBetMoney: amount }).obSingleBetMoney).toBe(0);
+    const prefs = normalizeExtensionPrefs({ arbExecutionMode: "obSingle", obSingleBetMoney: "250.55" });
+    expect(prefs.obSingleBetMoney).toBe(250.55);
     expect(normalizeExtensionPrefs(JSON.parse(serializeExtensionPrefsForSave(prefs)))).toEqual(prefs);
   });
 

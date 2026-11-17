@@ -3,6 +3,7 @@ import type { PlatformAccount } from "@/models/platformAccount";
 import type { AccountStoreContext } from "@/stores/account/context";
 import type { PlatformId } from "@/types/esport";
 import { useUserStore } from "@/stores/userStore";
+import { obSingleFundingThreshold } from "@/domain/betting/obSingleStake";
 
 /** [A8 可证实] Io.getAccount：多账号时按 account.profit 与 implied 优选 */
 function pickByAccountProfitA8(
@@ -33,9 +34,11 @@ export function accountsFundingReady(store: AccountStoreContext): boolean {
 export { formatAccountFundingHint } from "@/domain/betting/accountFundingHint";
 
 export function getProviders(store: AccountStoreContext, minBetMoney?: number) {
-  const config = useUserStore().config;
+  const user = useUserStore();
+  const config = user.config;
   // [changmen 扩展] 合计模式按选腿后的实际注码选号，不能要求单账号余额达到整组总额。
-  const threshold = minBetMoney ?? (config.betMoneyMode === "total" ? 0 : config.betMoney);
+  const threshold = obSingleFundingThreshold(config, user.extensionPrefs?.arbExecutionMode === "obSingle" ? user.extensionPrefs.obSingleBetMoney : 0,
+    minBetMoney ?? (config.betMoneyMode === "total" ? 0 : config.betMoney));
   const map = new Map<PlatformId, PlatformAccount[]>();
   for (const acc of store.accounts) {
     const bal = acc.getBalance();

@@ -14,7 +14,7 @@ import { prewarmPmSportForCandidate } from "@changmen/venue-browser/polymarket";
 import { capturePmFokPreflightMode, setPmFokPreflightMode } from "@changmen/venue-browser/polymarket";
 vi.mock("@changmen/venue-browser/polymarket", async importOriginal => ({ ...await importOriginal<typeof import("@changmen/venue-browser/polymarket")>(), prewarmPmSportForCandidate: vi.fn() }));
 
-const state = vi.hoisted(() => ({ store: null as unknown as AccountStoreContext }));
+const state = vi.hoisted(() => ({ store: null as unknown as AccountStoreContext, executionMode: "normal", obSingleBetMoney: 0 }));
 vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({
   ...state.store,
   getProviders: (amount: number) => getProviders(state.store, amount),
@@ -22,7 +22,7 @@ vi.mock("@/stores/accountStore", () => ({ useAccountStore: () => ({
 }) }));
 vi.mock("@/stores/userStore", () => ({ useUserStore: () => ({
   userId: "owner", config: createDefaultUserConfig(),
-  extensionPrefs: { arbAllowedPlatforms: null, stakeScaleByProfit: { enabled: false } },
+  extensionPrefs: { arbAllowedPlatforms: null, stakeScaleByProfit: { enabled: false }, arbExecutionMode: state.executionMode, obSingleBetMoney: state.obSingleBetMoney },
 }) }));
 vi.mock("@/stores/matchStore", () => ({ useMatchStore: () => ({ getBetTarget: () => undefined }) }));
 vi.mock("@/stores/loseOrderStore", () => ({ useLoseOrderStore: () => ({ orders: new Map() }) }));
@@ -36,7 +36,7 @@ const combinations = [
 ] as const;
 const histories = ["count", "odds", "opposite"] as const;
 
-beforeEach(() => { sessionStorage.clear(); setPmFokPreflightMode("legacy"); vi.mocked(prewarmPmSportForCandidate).mockClear(); });
+beforeEach(() => { sessionStorage.clear(); state.executionMode = "normal"; state.obSingleBetMoney = 0; setPmFokPreflightMode("legacy"); vi.mocked(prewarmPmSportForCandidate).mockClear(); });
 it.each(["legacy", "optimized"] as const)("FOK skips Gamma prewarm and freezes %s before account selection", async mode => {
   setPmFokPreflightMode(mode);
   const fixture = makeFixture(["Polymarket", "RAY"], "count");
@@ -69,7 +69,7 @@ function makeFixture(providers: readonly PlatformId[], history: typeof histories
   });
   state.store = { accounts, loaded: true, providerPickIndex: new Map() } as AccountStoreContext;
   const legs = providers.map((type, index) => ({ type, target: index === 0 ? "Home" : "Away", odds: 2, betMoney: 100 })) as BetOption[];
-  const bet = { id: ++betId, items: [], getOrderOptions: () => legs } as unknown as ViewBet;
+  const bet = { id: ++betId, items: [], getOrderOptions: vi.fn(() => legs) } as unknown as ViewBet;
   const config = { ...createDefaultUserConfig(), minMoney: 0, maxMoney: 0, betMoney: 100, profit: 1, noSameBet: history === "opposite" };
   const params = { match: { id: 1, gameId: 1, title: "A vs B", game: "英雄联盟" } as ViewMatch, bet, config, setMessage: vi.fn() };
   return { accounts, legs, params };
@@ -102,6 +102,27 @@ it("OB mode skips an OB pair when the peer only has a 9999 account", async () =>
   const fixture = makeFixture(["OB", "RAY"], "count");
   fixture.accounts[1]!.rateConfig = [{ minOdds: 0, maxOdds: 0, rate: 9999 }];
   expect(await prepareArbAttempt({ ...fixture.params, executionMode: "obSingle" })).toBeNull();
+});
+
+it("passes the dedicated amount only for OB mode and selects funded accounts using that smaller budget", async () => {
+  state.executionMode = "obSingle"; state.obSingleBetMoney = 40;
+  const fixture = makeFixture(["OB", "RAY"], "count");
+  fixture.accounts.forEach(account => { account.balance = 60; });
+  const build = vi.mocked(fixture.params.bet.getOrderOptions);
+  build.mockImplementation((_match, config, _accounts, _providers, amount) => {
+    fixture.legs.forEach(leg => { leg.betMoney = amount || config.betMoney; });
+    return fixture.legs;
+  });
+  const ready = await prepareArbAttempt({ ...fixture.params, executionMode: "obSingle" });
+  expect(ready?.executionMode).toBe("obSingle");
+  expect(build.mock.calls[0]?.[4]).toBe(40);
+  expect(build.mock.calls[0]?.[3]).toEqual(expect.arrayContaining(["OB", "RAY"]));
+  expect(ready?.accountA).toBe(fixture.accounts[0]);
+  expect(fixture.params.config.betMoney).toBe(100);
+
+  fixture.accounts.forEach(account => { account.balance = 1000; });
+  await prepareArbAttempt({ ...fixture.params, executionMode: "normal" });
+  expect(build.mock.calls.at(-1)?.[4]).toBe(0);
 });
 
 it("🎯 keeps both normal accounts for LOS precheck and skips a consumed market", async () => {

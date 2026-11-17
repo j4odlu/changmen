@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   selectPreflight: undefined as ((value: string) => void) | undefined,
   selectExecution: undefined as ((value: string) => void) | undefined,
   switches: new Map<string, { disabled: boolean; value: boolean; change: (value: boolean) => void }>(),
+  amounts: new Map<string, (value: number) => void>(),
 }));
 
 vi.mock("element-plus/es/components/base/style/css", () => ({}));
@@ -53,7 +54,13 @@ vi.mock("element-plus/es", async () => {
     ElForm: container,
     ElFormItem: container,
     ElTooltip: container,
-    ElInputNumber: container,
+    ElInputNumber: defineComponent({
+      props: ["modelValue"], emits: ["update:modelValue"],
+      setup(props, { emit, attrs }) {
+        if (attrs["aria-label"]) mocks.amounts.set(String(attrs["aria-label"]), value => emit("update:modelValue", value));
+        return () => h("input", { "aria-label": attrs["aria-label"], value: props.modelValue });
+      },
+    }),
     ElSwitch: defineComponent({
       props: ["modelValue", "disabled"], emits: ["change"],
       setup(props, { attrs, emit }) {
@@ -96,6 +103,7 @@ beforeEach(() => {
   setActivePinia(createPinia());
   mocks.alert.mockReset().mockResolvedValue("confirm");
   mocks.save.mockReset().mockResolvedValue(undefined);
+  mocks.amounts.clear();
   mocks.buttons.clear();
   mocks.select = undefined;
   mocks.selectPreflight = undefined;
@@ -205,6 +213,22 @@ describe("PM arbitrage retirement and preflight settings", () => {
     expect(user.extensionPrefs.lowOddsSingleHigherCProbabilityOnly).toBe(true);
     await mocks.buttons.get("保存")!();
     expect(mocks.save).toHaveBeenCalledOnce();
+  });
+
+  it("shows the independent amount only under OB mode and saves it with Extensions", async () => {
+    const user = useUserStore();
+    expect(await renderToString(createSSRApp(Tab))).not.toContain('aria-label="仅下OB买入金额"');
+    user.extensionPrefs.arbExecutionMode = "obSingle";
+    const html = await renderToString(createSSRApp(Tab));
+    expect(html).toContain('aria-label="仅下OB买入金额"');
+    expect(html).toContain("按两边赔率分配");
+    mocks.amounts.get("仅下OB买入金额")!(250.55);
+    await mocks.buttons.get("保存")!();
+    expect(user.extensionPrefs.obSingleBetMoney).toBe(250.55);
+    expect(mocks.save).toHaveBeenCalledOnce();
+    user.extensionPrefs.arbExecutionMode = "lowOddsSingle";
+    expect(await renderToString(createSSRApp(Tab))).not.toContain('aria-label="仅下OB买入金额"');
+    expect(user.extensionPrefs.obSingleBetMoney).toBe(250.55);
   });
 
   it("places all four unchanged 9999 settings in a sibling section below hedge mode without changing saved preferences", async () => {

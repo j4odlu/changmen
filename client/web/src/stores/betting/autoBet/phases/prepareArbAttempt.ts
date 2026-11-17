@@ -75,7 +75,8 @@ export async function prepareArbAttempt(
   // [changmen 扩展] 扩展 Tab 套利场馆白名单；null = 不限制（现网）
   const providerKeys = filterArbProviderKeys(funded, userStore.extensionPrefs.arbAllowedPlatforms);
 
-  const options = bet.getOrderOptions(match, config, accounts, providerKeys);
+  const options = bet.getOrderOptions(match, config, accounts, providerKeys,
+    params.executionMode === "obSingle" ? userStore.extensionPrefs.obSingleBetMoney : 0);
   if (!options || options.length !== 2) {
     return null;
   }

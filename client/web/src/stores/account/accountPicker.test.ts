@@ -4,11 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlatformAccount } from "@/models/platformAccount";
 import { accountsFundingReady, getProviders, pickAccount } from "@/stores/account/accountPicker";
 
-const config = vi.hoisted(() => ({ profit: 1.03, betMoney: 100, betMoneyMode: "buy" }));
+const config = vi.hoisted(() => ({ profit: 1.03, betMoney: 100, betMoneyMode: "buy", minMoney: 0, maxMoney: 0 }));
+const extensionPrefs = vi.hoisted(() => ({ arbExecutionMode: "normal", obSingleBetMoney: 0 }));
 
 vi.mock("@/stores/userStore", () => ({
   useUserStore: () => ({
     config,
+    extensionPrefs,
   }),
 }));
 
@@ -59,6 +61,18 @@ describe("accountsFundingReady", () => {
 });
 
 describe("getProviders", () => {
+  it("does not filter smaller OB budgets using the ordinary amount and still checks each planned leg", () => {
+    extensionPrefs.arbExecutionMode = "obSingle"; extensionPrefs.obSingleBetMoney = 40;
+    try {
+      const store = makeStore([makeAccount({ provider: "OB", balance: 50 }), makeAccount({ provider: "RAY", balance: 70 })]);
+      expect([...getProviders(store, 100).keys()]).toEqual(["OB", "RAY"]);
+      expect(pickAccount(store, "OB", 40)).toBeDefined();
+      expect(pickAccount(store, "OB", 60)).toBeUndefined();
+      extensionPrefs.arbExecutionMode = "normal";
+      expect(getProviders(store, 100).size).toBe(0);
+    }
+    finally { extensionPrefs.arbExecutionMode = "normal"; extensionPrefs.obSingleBetMoney = 0; }
+  });
   it("uses actual leg stakes for account selection in total mode", () => {
     config.betMoneyMode = "total";
     try {

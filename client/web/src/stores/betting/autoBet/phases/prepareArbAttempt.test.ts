@@ -262,6 +262,7 @@ describe("prepareArbAttempt early return (A8 静默 continue)", () => {
       config,
       expect.any(Array),
       ["PB"],
+      0,
     );
   });
 });

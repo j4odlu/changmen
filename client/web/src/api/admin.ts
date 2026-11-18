@@ -478,9 +478,25 @@ export interface ValueBetProviderRow extends PlatformAnalyticsRow {
   avg_odds: number;
 }
 
+export interface BetProfitProviderRow extends ValueBetProviderRow {
+  returns: number;
+  settled_orders: number;
+  settled_bet: number;
+  settled_profit: number;
+  pending_bet: number;
+}
+
 /** 正 EV 单边：场馆 × 赔率区间 */
 export interface ValueBetOddsBucketRow extends ValueBetProviderRow {
   odds_bucket: string;
+}
+
+export interface BetProfitAccountRow extends BetProfitProviderRow {
+  user_id: string;
+  user_name: string | null;
+  player_id: number | null;
+  account_name: string;
+  account_deleted: boolean;
 }
 
 export interface ValueBetOrderAnalyticsPayload {
@@ -488,6 +504,15 @@ export interface ValueBetOrderAnalyticsPayload {
   endMs?: number;
   byProvider: ValueBetProviderRow[];
   byOddsBucket: ValueBetOddsBucketRow[];
+}
+
+export interface BetProfitAnalyticsPayload {
+  startMs?: number;
+  endMs?: number;
+  byProvider: BetProfitProviderRow[];
+  byOddsBucket: (BetProfitProviderRow & { odds_bucket: string })[];
+  byDay: (BetProfitProviderRow & { day: string })[];
+  byAccount: BetProfitAccountRow[];
 }
 
 export interface PlatformAnalyticsPayload {
@@ -509,6 +534,12 @@ export async function getAdminPlatformAnalytics(body: Record<string, unknown> = 
 /** [changmen 扩展] 正 EV 历史：场馆 × 赔率区间 */
 export async function getAdminValueBetAnalytics(body: Record<string, unknown> = {}) {
   return unwrap(await post<ValueBetOrderAnalyticsPayload>("Client_AdminValueBetAnalytics", body));
+}
+
+export type BetProfitMode = "obSingle" | "valueBet";
+
+export async function getAdminBetProfitAnalytics(body: Record<string, unknown> & { mode: BetProfitMode }) {
+  return unwrap(await post<BetProfitAnalyticsPayload>("Client_AdminBetProfitAnalytics", body));
 }
 
 export interface PolymarketBuilderTradeRow {

@@ -7,6 +7,7 @@ const PUBLIC_ACTIONS = new Set([
 ]);
 
 const ADMIN_ONLY_ACTIONS = new Set([
+  "Client_AdminBetProfitAnalytics",
   "Client_AdminLeaderboardUsers",
   "Client_AdminSetLeaderboardExcluded",
   "Client_AdminCreateUser",
@@ -33,6 +34,7 @@ const ADMIN_ONLY_ACTIONS = new Set([
 ]);
 
 const LEADER_ALLOWED_ACTIONS = new Set([
+  "Client_AdminValueBetAnalytics",
   "Client_AdminDashboard",
   "Client_AdminUsers",
   "Client_AdminOrders",

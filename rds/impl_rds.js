@@ -63,6 +63,8 @@ export {
   fetchAccountAnalytics,
   fetchArbOddsAnalytics,
   fetchValueBetOrderAnalytics,
+  fetchValueBetProfitAnalytics,
+  fetchObSingleOrderAnalytics,
   fetchPolymarketOrderAnalytics,
   fetchPolymarketOrdersInRange,
   fetchPolymarketOrderStatsInRange,

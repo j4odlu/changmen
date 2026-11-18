@@ -164,6 +164,8 @@ export const {
   fetchAccountAnalytics,
   fetchArbOddsAnalytics,
   fetchValueBetOrderAnalytics,
+  fetchValueBetProfitAnalytics,
+  fetchObSingleOrderAnalytics,
   fetchPolymarketOrderAnalytics,
   fetchPolymarketOrdersInRange,
   fetchPolymarketOrderStatsInRange,

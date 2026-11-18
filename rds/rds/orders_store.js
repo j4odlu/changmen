@@ -6,6 +6,9 @@ import { normalizeOrderMarketIdentity } from "@changmen/shared/order_market_iden
 
 import {
   VALUE_BET_LINK_BASE,
+  OB_SINGLE_LINK_BASE,
+  LOW_ODDS_LINK_BASE,
+  sqlLinkHomeTsExpr,
   canRebindLinkNewerToOlder,
   shouldAllowOrderBind,
   shouldFireOrderBoundHook,
@@ -1677,7 +1680,7 @@ export async function fetchValueBetOrderAnalytics(startMs, endMs, userIds) {
   try {
     const fx = getExchange(Currency.USDT);
     const params = [startMs, endMs, fx, VALUE_BET_LINK_BASE];
-    const uf = appendUserIdsFilter(params, userIds);
+    const uf = Array.isArray(userIds) && userIds.length === 0 ? " AND FALSE" : appendUserIdsFilter(params, userIds);
     const moneyCny = sqlOrderMoneyCny("", "$3");
     const betCny = sqlOrderBetCny("", "$3");
     const oddsBucket = sqlOddsBucketExpr("odds");
@@ -1717,6 +1720,95 @@ export async function fetchValueBetOrderAnalytics(startMs, endMs, userIds) {
     console.warn("[rds] fetchValueBetOrderAnalytics:", err.message);
     return { byProvider: [], byOddsBucket: [] };
   }
+}
+
+/** [changmen 扩展] 管理员 EV 盈利统计；独立于原 EV 分析口径。 */
+export async function fetchValueBetProfitAnalytics(startMs, endMs, userIds) {
+  return fetchSingleBetProfitAnalytics(startMs, endMs, userIds, "valueBet");
+}
+
+/** [changmen 扩展] 仅下 OB 模式；不包含普通 OB 套利腿、9999、LOS 或 EV。 */
+export async function fetchObSingleOrderAnalytics(startMs, endMs, userIds) {
+  return fetchSingleBetProfitAnalytics(startMs, endMs, userIds, "obSingle");
+}
+
+async function fetchSingleBetProfitAnalytics(startMs, endMs, userIds, mode) {
+  const pool = getPgPool();
+  if (!pool)
+    throw new Error("盈利分析数据库暂不可用");
+  const fx = getExchange(Currency.USDT);
+  const obSingle = mode === "obSingle";
+  const params = [startMs, endMs, fx, obSingle ? OB_SINGLE_LINK_BASE : VALUE_BET_LINK_BASE];
+  if (obSingle)
+    params.push(LOW_ODDS_LINK_BASE);
+  const uf = Array.isArray(userIds) && userIds.length === 0 ? " AND FALSE" : appendUserIdsFilter(params, userIds);
+  const moneyCny = sqlOrderMoneyCny("", "$3");
+  const betCny = sqlOrderBetCny("", "$3");
+  const oddsBucket = sqlOddsBucketExpr("odds");
+  const where = `${sqlOrderBelongsToRange(1, 2)}
+       AND provider IS NOT NULL AND provider != ''
+       AND NOT ${sqlIsPredictionSell("")}
+       AND link < 0 AND ABS(link) >= $4${obSingle ? " AND ABS(link) < $5 AND provider = 'OB'" : ""}${uf}`;
+  const pending = sqlAnalyticsPending("");
+  // PM 的 50/50 最终派彩可能恰好零盈亏，Return 此时不是取消退款。
+  const neutralSettlement = `(status = 'Return' AND provider = 'Polymarket'
+    AND LOWER(COALESCE(raw->>'pmMatchResult', '')) = 'equal_split')`;
+  const settled = `(status IN ('Win', 'Lose') OR (status = 'None' AND ${sqlPredictionBuyClosed("")}) OR ${neutralSettlement})`;
+  const aggSelect = `
+      COUNT(*)::int AS total_orders,
+      COUNT(*) FILTER (WHERE status = 'Win')::int AS wins,
+      COUNT(*) FILTER (WHERE status = 'Lose')::int AS losses,
+      COUNT(*) FILTER (WHERE status = 'Reject')::int AS rejects,
+      COUNT(*) FILTER (WHERE status = 'Return')::int AS returns,
+      COUNT(*) FILTER (WHERE ${pending})::int AS pending,
+      COUNT(*) FILTER (WHERE ${settled})::int AS settled_orders,
+      COALESCE(SUM(${betCny}) FILTER (WHERE status NOT IN ('Reject', 'Return') OR ${neutralSettlement}), 0)::float AS total_bet,
+      COALESCE(SUM(${moneyCny}), 0)::float AS total_profit,
+      COALESCE(SUM(${betCny}) FILTER (WHERE ${settled}), 0)::float AS settled_bet,
+      COALESCE(SUM(${moneyCny}) FILTER (WHERE ${settled}), 0)::float AS settled_profit,
+      COALESCE(SUM(${betCny}) FILTER (WHERE ${pending}), 0)::float AS pending_bet,
+      AVG(odds)::float AS avg_odds`;
+  // 一次查询提供同一 MVCC 快照，实时结算时各表与用户合计仍可互相核对。
+  // 同一用户/场馆订单重加账号后只计一次；非 Reject 优先，再取较新的记录。
+  const day = `to_char(to_timestamp(${sqlLinkHomeTsExpr()} / 1000.0) AT TIME ZONE $${params.length + 1}, 'YYYY-MM-DD')`;
+  const { rows } = await pool.query(
+    `WITH ranked AS (
+       SELECT *, ROW_NUMBER() OVER (
+         PARTITION BY user_id, provider, (NULLIF(BTRIM(order_id), '') IS NULL),
+           COALESCE(NULLIF(LOWER(BTRIM(order_id)), ''), id::text)
+         ORDER BY (status IS DISTINCT FROM 'Reject') DESC, id DESC
+       ) AS analytics_order_rank
+       FROM ${analyticsOrdersRelation()}
+       WHERE ${where}
+     ), scoped AS (
+       SELECT * FROM ranked WHERE analytics_order_rank = 1
+     ), provider_totals AS (
+       SELECT provider,${aggSelect} FROM scoped GROUP BY provider
+     ), odds_totals AS (
+       SELECT ${oddsBucket} AS odds_bucket, provider,${aggSelect}
+       FROM scoped GROUP BY odds_bucket, provider
+     ), day_totals AS (
+       SELECT ${day} AS day, provider,${aggSelect}
+       FROM scoped GROUP BY day, provider
+     ), account_totals AS (
+       SELECT user_id, player_id, provider,${aggSelect}
+       FROM scoped GROUP BY user_id, player_id, provider
+     ), account_rows AS (
+       SELECT a.*, pr.user_name,
+         COALESCE(NULLIF(p.account_data->>'venueAccountName', ''), NULLIF(p.player_name, ''), a.player_id::text, '未记录') AS account_name,
+         (p.deleted_at IS NOT NULL) AS account_deleted
+       FROM account_totals a
+       LEFT JOIN profiles pr ON pr.id = a.user_id
+       LEFT JOIN players p ON p.id = a.player_id AND p.owner_user_id = a.user_id AND p.provider = a.provider
+     )
+     SELECT
+       COALESCE((SELECT jsonb_agg(t ORDER BY t.total_orders DESC, t.provider) FROM provider_totals t), '[]'::jsonb) AS "byProvider",
+       COALESCE((SELECT jsonb_agg(t ORDER BY t.odds_bucket, t.provider) FROM odds_totals t), '[]'::jsonb) AS "byOddsBucket",
+       COALESCE((SELECT jsonb_agg(t ORDER BY t.day, t.provider) FROM day_totals t), '[]'::jsonb) AS "byDay",
+       COALESCE((SELECT jsonb_agg(t ORDER BY t.total_profit DESC, t.user_id, t.provider, t.player_id) FROM account_rows t), '[]'::jsonb) AS "byAccount"`,
+    [...params, Intl.DateTimeFormat().resolvedOptions().timeZone],
+  );
+  return rows[0] ?? { byProvider: [], byOddsBucket: [], byDay: [], byAccount: [] };
 }
 
 /**

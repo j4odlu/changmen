@@ -24,7 +24,7 @@ describe("original routes and guards with listener history", () => {
       "/admin/certificates", "/login", "/", "/sports", "/sports/:sport(football|basketball|baseball|tennis)",
       "/admin", "/admin/users", "/admin/accounts", "/admin/leaderboard", "/admin/orders", "/admin/football-orders",
       "/admin/maintenance", "/admin/orders-matrix", "/admin/reports", "/admin/football-reports", "/admin/analytics",
-      "/admin/ev-analytics", "/admin/polymarket-builder", "/admin/health", "/admin/value-bet",
+      "/admin/ev-analytics", "/admin/bet-profit-analytics", "/admin/polymarket-builder", "/admin/health", "/admin/value-bet",
     ]);
   });
   it("preserves the original public-page behavior", async () => {
@@ -40,6 +40,18 @@ describe("original routes and guards with listener history", () => {
     expect(await state.guard!({ meta: { requiresAdmin: true, requiresFullAdmin: true } })).toEqual({ name: "home" });
     state.user.isAdmin = true;
     expect(await state.guard!({ meta: { requiresAdmin: true, requiresFullAdmin: true } })).toBe(true);
+  });
+  it("protects the combined profit link while keeping the original EV route open to leaders", async () => {
+    const profit = state.routes.find(route => route.name === "admin-bet-profit-analytics")!;
+    expect(profit.meta).toMatchObject({ requiresAdmin: true, requiresFullAdmin: true });
+    const ev = state.routes.find(route => route.name === "admin-ev-analytics")!;
+    expect(ev.redirect).toBeUndefined();
+    expect(ev.meta).toEqual({ requiresAdmin: true });
+    state.authenticated = true; state.user.canAccessAdmin = true;
+    expect(await state.guard!({ meta: profit.meta })).toEqual({ name: "home" });
+    expect(await state.guard!({ meta: ev.meta })).toBe(true);
+    state.user.isAdmin = true;
+    expect(await state.guard!({ meta: profit.meta })).toBe(true);
   });
   it("preserves the original user-info failure fallback", async () => {
     state.authenticated = true; state.user.ready = false; state.user.restoreSession.mockRejectedValueOnce(new Error("offline"));

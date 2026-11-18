@@ -1,7 +1,7 @@
 import * as sb from "@changmen/db";
 import * as adminUsers from "@changmen/db/admin_users.js";
 import { accountProviderKey, resolveAccountMultiply } from "@changmen/shared/account_multiply";
-import { isAdminUser } from "../auth/admin_auth.js";
+import { canAccessAdminPanel, isAdminUser } from "../auth/admin_auth.js";
 import { filterProfiles, getVisibleUserIds, resolveVisibleUserIds } from "../auth/role_filter.js";
 import { listProfileRows, loadAccountsForUser, loadProfileById } from "../db/store.js";
 import { listUserProfitRank, toDateKey } from "./order_store.js";
@@ -910,10 +910,25 @@ export async function getPlatformAnalytics(body = {}, caller = null) {
 
 /** [changmen 扩展] 正 EV 历史统计（场馆 × 赔率区间） */
 export async function getValueBetOrderAnalytics(body = {}, caller = null) {
+  if (!canAccessAdminPanel(caller))
+    throw new Error("无管理权限");
   const { startMs, endMs } = resolveAnalyticsRange(body);
   const userIds = await resolveAnalyticsUserIds(caller);
   const valueBet = await sb.fetchValueBetOrderAnalytics(startMs, endMs, userIds);
   return { startMs, endMs, ...valueBet };
+}
+
+/** [changmen 扩展] 管理员专用的单边策略盈利分析。 */
+export async function getBetProfitAnalytics(body = {}, caller = null) {
+  if (!isAdminUser(caller))
+    throw new Error("无管理员权限");
+  if (body.mode !== "obSingle" && body.mode !== "valueBet")
+    throw new Error("请选择仅 OB 模式或 EV 下注");
+  const { startMs, endMs } = resolveAnalyticsRange(body);
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || startMs < 0 || startMs >= endMs)
+    throw new Error("分析时间范围无效");
+  const load = body.mode === "obSingle" ? sb.fetchObSingleOrderAnalytics : sb.fetchValueBetProfitAnalytics;
+  return { startMs, endMs, ...await load(startMs, endMs) };
 }
 
 export async function getPolymarketBuilderDashboard(body = {}, caller = null) {

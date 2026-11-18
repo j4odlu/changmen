@@ -15,6 +15,8 @@ declare module 'vue' {
     ActiveBetRunView: typeof import('./src/components/order/ActiveBetRunView.vue')['default']
     AdminAccountOrdersColumn: typeof import('./src/components/admin/AdminAccountOrdersColumn.vue')['default']
     AdminArbOddsSection: typeof import('./src/components/admin/AdminArbOddsSection.vue')['default']
+    AdminBetProfitAccountsSection: typeof import('./src/components/admin/AdminBetProfitAccountsSection.vue')['default']
+    AdminBetProfitStatsSection: typeof import('./src/components/admin/AdminBetProfitStatsSection.vue')['default']
     AdminCreateUserDialog: typeof import('./src/components/admin/AdminCreateUserDialog.vue')['default']
     AdminLayout: typeof import('./src/components/admin/AdminLayout.vue')['default']
     AdminOrderExecutionProgress: typeof import('./src/components/admin/AdminOrderExecutionProgress.vue')['default']

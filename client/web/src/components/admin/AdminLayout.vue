@@ -61,6 +61,12 @@ const navItems: AdminNavItem[] = [
     to: { name: "admin-ev-analytics" },
   },
   {
+    name: "admin-bet-profit-analytics",
+    label: "下注盈利分析",
+    icon: "am-icon-star",
+    to: { name: "admin-bet-profit-analytics" },
+  },
+  {
     name: "admin-polymarket-builder",
     label: "Poly Builder",
     icon: "am-icon-flash",
@@ -87,6 +93,7 @@ const navItems: AdminNavItem[] = [
 ];
 
 const ADMIN_ONLY_NAV = new Set([
+  "admin-bet-profit-analytics",
   'admin-certificates',
   "admin-leaderboard",
   "admin-polymarket-builder",

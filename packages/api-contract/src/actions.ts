@@ -97,6 +97,8 @@ export const ESPORT_ACTIONS = [
   "Client_AdminDeleteOrders",
   "Client_AdminMonthReport",
   "Client_AdminPlatformAnalytics",
+  "Client_AdminBetProfitAnalytics",
+  "Client_AdminValueBetAnalytics",
   "Client_AdminPolymarketBuilder",
   "Client_AdminValueBet",
   "Client_AdminUpdateAccountMultiply",
